@@ -1,0 +1,88 @@
+esphome:
+  name: bed-lighting
+  friendly_name: bed-lighting
+
+esp32:
+  board: seeed_xiao_esp32c3
+  framework:
+    type: arduino
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "xxxx"
+
+ota:
+  password: "xxxx"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Bed-Lighting Fallback Hotspot"
+    password: "xxxx"
+
+captive_portal:
+
+
+sensor:
+  - platform: rotary_encoder
+    name: "Encoder"
+    id: rotary_encoder_bed
+    pin_a: 4 #CLK
+    pin_b: 8 #DT
+    filters:
+      - or:
+        - debounce: 0.15s
+        - delta: 10
+    on_clockwise:
+      then:
+        - logger.log: "Turned Clockwise"
+        - light.dim_relative:
+              id: bed_led
+              transition_length: 0.1s
+              relative_brightness: 5%
+    on_anticlockwise:
+        then:
+          - logger.log: "Turned Anticlockwise"
+          - light.dim_relative:
+                id: bed_led
+                transition_length: 0.1s
+                relative_brightness: -5%
+
+binary_sensor:
+  platform: gpio
+  name: "ENC Switch"
+  pin:
+    number: 6
+    inverted: true
+    mode:
+      input: true
+      pullup: true
+  filters:
+    delayed_on: 10ms
+  on_press: 
+    then:
+      - light.toggle: bed_led
+
+light:
+  - platform: monochromatic
+    name: "Bed LED"
+    id: bed_led
+    output: pwm_output
+    default_transition_length: 2s
+    effects:
+      - pulse:
+          name: "Slow Pulse"
+          transition_length: 4s
+
+# Output Lights
+output:
+  - platform: ledc
+    id: pwm_output
+    frequency: 19531Hz
+    pin: 7
